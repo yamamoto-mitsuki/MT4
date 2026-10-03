@@ -3,38 +3,13 @@
 #include <numbers>
 #include <algorithm>
 #include <imgui.h>
+#include "Vector2.h"
 #include "Vector3.h"
 #include "Matrix4x4.h"
+#include "Spherical.h"
 
 const char kWindowTitle[] = "MT4";
 
-// ===== 構造体 =====
-// 球面座標系
-struct Spherical {
-	float radius; // 動径 r
-	float theta;  // 仰角 Θ
-	float phi;    // 方位角 φ
-};
-
-// ===== 関数 =====
-// 球面座標から直交座標への変換
-Vector3 ToCartesian(const Spherical& s) {
-	float rho = s.radius * std::cos(s.theta);
-	return {rho * std::cos(s.phi), s.radius * std::sin(s.theta), rho * std::sin(s.phi)};
-}
-// 直交座標から球面座標への変換
-Spherical ToSpherical(const Vector3& p) { 
-	float r = std::sqrt(p.x * p.x + p.y * p.y + p.z * p.z); 
-	if (r == 0.0f) {
-		return {0.0f, 0.0f, 0.0f};
-	}
-	float sinTheta = std::clamp(p.y / r, -1.0f, 1.0f);
-	float phi = 0.0f;
-	if (p.x != 0.0f || p.z != 0.0f) {
-		phi = std::atan2(p.z, p.x);
-	}
-	return {r, std::asin(sinTheta), phi};
-}
 // 注視点（原点）を向くカメラのワールド行列を作成する
 Matrix4x4 MakeCameraMatrix(const Vector3& pos) {
 	// 注視点（0,0,0）への前
@@ -65,15 +40,18 @@ Matrix4x4 MakeCameraMatrix(const Vector3& pos) {
 	return mat;
 }
 
+
 // Windowsアプリでのエントリーポイント(main関数)
 int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 
 	// ライブラリの初期化
 	Novice::Initialize(kWindowTitle, 1280, 720);
 
-	// 初期値
-	const float halfPi = std::numbers::pi_v<float> / 2.0f;
-	Spherical s{6.0f, 0.0f, -halfPi};
+	// ===== 初期値 =====
+	const float deltaTime = 1.0f / 60.0f;
+	Vector2 pos = {640.0f, 360.0f}; // 円B
+	float speed = 5.0f; // 追従速度
+	
 
 
 
@@ -90,47 +68,56 @@ int WINAPI WinMain(_In_ HINSTANCE, _In_opt_ HINSTANCE, _In_ LPSTR, _In_ int) {
 		memcpy(preKeys, keys, 256);
 		Novice::GetHitKeyStateAll(keys);
 
-		///
-		/// ↓更新処理ここから
-		///
-
-		// 球面座標から直交座標を計算
-		Vector3 pos = ToCartesian(s);
-		// カメラのワールド行列を作成
-		Matrix4x4 cameraMatrix = MakeCameraMatrix(pos);
-
-		///
-		/// ↑更新処理ここまで
-		///
-
-		///
-		/// ↓描画処理ここから
-		///
+		
+		// ===== 入力 =====
+		// 円A
+		int mouseX, mouseY = 0;
+		Novice::GetMousePosition(&mouseX, &mouseY);
+		// 追従目標値
+		const Vector2 target = {static_cast<float>(mouseX), static_cast<float>(mouseY)};
+		// 進む
+		pos.x += (speed * deltaTime) * (target.x - pos.x);
+		pos.y += (speed * deltaTime) * (target.y - pos.y);
 
 		// ===== ImGui =====
-		ImGui::Begin("Spherical Coordinates");
-		ImGui::Text("Target: (0, 0, 0) / +Y up / Camera +Z forward");
+		ImGui::Begin("Interpolation Controller");
+		ImGui::Text("Target: Mouse Position (Red Circle)");
+		ImGui::TextColored(ImVec4(0.5f, 1.0f, 0.5f, 1.0f), "[Linear Interpolation - Student Mode]");
+		ImGui::SliderFloat("Speed", &speed, 0.0f, 60.0f, "%.1f");
 		ImGui::Separator();
-		// 球面座標
-		ImGui::DragFloat("Radius", &s.radius, 0.01f);
-		ImGui::DragFloat("Theta: elevation (rad)", &s.theta, 0.01f);
-		ImGui::DragFloat("Phi (rad)", &s.phi, 0.01f);
+		// マウスと円Bの座標
+		ImGui::Text("Mouse Pos: (%d, %d)", mouseX, mouseY);
+		ImGui::Text("Circle Pos: (%.1f, %.1f)", pos.x, pos.y);
+		// 円同士の中心間の距離
+		const float dx = static_cast<float>(mouseX) - pos.x;
+		const float dy = static_cast<float>(mouseY) - pos.y;
+		const float distance = std::sqrt(dx * dx + dy * dy);
+		ImGui::Text("Distance to Target: %.1f px", distance);
 		ImGui::Separator();
-		// 変換した直交座標と、作成したカメラ行列を表示する
-		ImGui::Text("Spherical: r = %.3f, theta = %.3f rad, phi = %.3f rad", s.radius, s.theta, s.phi);
-		ImGui::Text("Cartesian: x = %.3f, y = %.3f, z = %.3f", pos.x, pos.y, pos.z);
-		ImGui::Separator();
-
-		ImGui::Text("Camera matrix");
-		for (int i = 0; i < 4; ++i) {
-			ImGui::Text("%8.3f %8.3f %8.3f %8.3f", cameraMatrix.m[i][0], cameraMatrix.m[i][1], cameraMatrix.m[i][2], cameraMatrix.m[i][3]);
+		// 円Bをマウス位置へ移動
+		if (ImGui::Button("Snap to Target")) {
+			pos.x = static_cast<float>(mouseX);
+			pos.y = static_cast<float>(mouseY);
 		}
-
+		// 次のボタンを横に並べる
+		ImGui::SameLine();
+		// 円Bを画面中央へ戻す
+		if (ImGui::Button("Reset to Center")) {
+			pos.x = 640.0f;
+			pos.y = 360.0f;
+		}
 		ImGui::End();
 
-		///
-		/// ↑描画処理ここまで
-		///
+		// ===== 描画 =====
+		const int drawX = static_cast<int>(pos.x);
+		const int drawY = static_cast<int>(pos.y);
+		// 中心同士を結ぶ線。円より先に描く。
+		Novice::DrawLine(mouseX, mouseY, drawX, drawY, 0xFFFFFFFF);
+		// 円B
+		Novice::DrawEllipse(drawX, drawY, 20, 20, 0.0f, 0x00FF00FF, kFillModeSolid);
+		// 円A
+		Novice::DrawEllipse(mouseX, mouseY, 12, 12, 0.0f, 0xFF0000FF, kFillModeSolid);
+
 
 		// フレームの終了
 		Novice::EndFrame();

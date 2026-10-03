@@ -25,6 +25,8 @@
   <ItemGroup>
     <ClInclude Include="..\MT3_Work\Matrix4x4.h" />
     <ClInclude Include="..\MT3_Work\Vector3.h" />
+    <ClInclude Include="Spherical.h" />
+    <ClInclude Include="Vector2.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>18.0</VCProjectVersion>
