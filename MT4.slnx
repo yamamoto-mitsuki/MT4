@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="MT4.vcxproj" />
+  <Project Path="MT4.vcxproj" Id="1fc47c0d-98d8-4701-84eb-e1c9c0708563" />
 </Solution>

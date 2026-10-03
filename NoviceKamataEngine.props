@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <KamataEngineRoot Condition="'$(KamataEngineRoot)'==''">C:\KamataEngine20260409\</KamataEngineRoot>
+    <OutDir>$(ProjectDir)bin\$(Platform)\$(Configuration)\</OutDir>
+    <IntDir>$(ProjectDir)obj\$(Platform)\$(Configuration)\</IntDir>
+    <LocalDebuggerWorkingDirectory>$(OutDir)</LocalDebuggerWorkingDirectory>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(KamataEngineRoot)Adapter;$(KamataEngineRoot)External\imgui;$(KamataEngineRoot)External\KamataEngine\include;$(KamataEngineRoot)External\DirectXTex\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+      <PreprocessorDefinitions>_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <UndefinePreprocessorDefinitions>_CONSOLE;%(UndefinePreprocessorDefinitions)</UndefinePreprocessorDefinitions>
+      <RuntimeLibrary Condition="'$(Configuration)'=='Debug'">MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeLibrary Condition="'$(Configuration)'=='Release'">MultiThreaded</RuntimeLibrary>
+      <PreprocessorDefinitions Condition="'$(Configuration)'=='Debug'">USE_IMGUI;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <AdditionalLibraryDirectories>$(KamataEngineRoot)External\KamataEngine\lib\$(Configuration);$(KamataEngineRoot)External\DirectXTex\lib\$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>KamataEngine.lib;DirectXTex.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <Manifest><EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness></Manifest>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="$(KamataEngineRoot)Adapter\Novice.cpp" />
+    <ClInclude Include="$(KamataEngineRoot)Adapter\Novice.h" />
+    <NoviceResource Include="$(KamataEngineRoot)DirectXGame\Resources\**\*" />
+  </ItemGroup>
+  <Target Name="CheckNovicePlatform" BeforeTargets="PrepareForBuild">
+    <Error Condition="'$(Platform)'!='x64'" Text="Novice / KamataEngine requires x64. Select the x64 solution platform." />
+  </Target>
+  <Target Name="CopyNoviceResources" AfterTargets="Build">
+    <Copy SourceFiles="@(NoviceResource)" DestinationFiles="@(NoviceResource->'$(OutDir)NoviceResources\%(RecursiveDir)%(Filename)%(Extension)')" SkipUnchangedFiles="true" />
+  </Target>
+</Project>
